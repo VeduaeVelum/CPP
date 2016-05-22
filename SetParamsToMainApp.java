@@ -5,6 +5,7 @@ import javafx.animation.FillTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
@@ -34,18 +35,22 @@ public class SetParamsToMainApp {
   private static final double PERSENT_TO_PARTS = 0.01;
   
   private static final String FPS_PROMT_TEXT = "Count of FPS(1-30)";
-  private static final String ALIVE_PROMT_TEXT = "Population percentage(0-100)";
+  private static final String ALIVE_PROMT_TEXT = 
+      "Population percentage(0-100)";
+  private static final String ADD_ALIVE_TEXT = "Add life supporting(Y/N)";
   private static final String BUTTON_TEXT = "Submit parametres";
   
   private static final int[] FPS_TXTFIELD_POS = {1, 0};
   private static final int[] ALIVE_TXTFIELD_POS = {1, 1};
+  private static final int[] ADD_ALIVE_FLAG_POS = {1, 2};
   private static final int[] SUBMIT_TXTFIELD_POS = {1, 3};  
   
-  private static double Alive_Probability;
+  private static double AliveProbability;
   private static int FPS;
-
+  
   private static TextField fps_mean;
   private static TextField alive_mean;
+  private static CheckBox add_alive;
   private static MenuItem submit;
   
   /**
@@ -75,17 +80,25 @@ public class SetParamsToMainApp {
         ALIVE_TXTFIELD_POS[1]);
     root.getChildren().add(alive_mean);
 
+    add_alive = new CheckBox();
+    add_alive.setText(ADD_ALIVE_TEXT);
+    add_alive.setSelected(false);
+    GridPane.setConstraints(add_alive, ADD_ALIVE_FLAG_POS[0], 
+        ADD_ALIVE_FLAG_POS[1]);
+    root.getChildren().add(add_alive);
+    
     submit = new MenuItem(BUTTON_TEXT);
     submit.setOnMouseClicked(event -> {
       String buf;
       buf = fps_mean.getText();
       FPS = Integer.parseInt(buf);
       buf = alive_mean.getText();
-      Alive_Probability = Double.parseDouble(buf);
-      if(checkParametres(FPS, Alive_Probability))
+      AliveProbability = Double.parseDouble(buf);
+      if(checkParametres(FPS, AliveProbability))
       {
         window.close();
-        new MainApplication().start(FPS, PERSENT_TO_PARTS * Alive_Probability);
+        new MainApplication().start(FPS, PERSENT_TO_PARTS * AliveProbability, 
+            add_alive.selectedProperty().get());
       }
       else
       {

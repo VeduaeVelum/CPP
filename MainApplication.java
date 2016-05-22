@@ -1,5 +1,12 @@
 package main_classes;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javafx.animation.Animation;
@@ -25,15 +32,15 @@ import javafx.util.Duration;
  */
 
 /**
- * Model of the "Game of Life";\n
- * Model of field: boarded polygon;\n
- * Life cannot penetrate through the board;\n
- * In the title of the window generations is counting;\n
+ * Model of the "Game of Life";
+ * Model of field: boarded polygon;
+ * Life cannot penetrate through the board;
+ * In the title of the window generations is counting;
  * Any generation life born in random cells of polygon.
  */
 
 public class MainApplication {
-  private static double Alive_Probability;  
+  private static double AliveProbability;  
   private static int FPS;
 
   private static final int SQUARE_SIZE = 12;
@@ -47,9 +54,22 @@ public class MainApplication {
   private boolean[][] nextGeneration = new boolean[X_MAX][Y_MAX];
   private boolean[][] temporaryReference;
   private boolean replayFlag = false;
+  private boolean lifeSupport = false;
   private int[] lifeSupporting = new int[NUM_OF_SUPPORT];
+  private int commonCountOfAlive = 0;
+  private int commonCountOfDeath = 0;
+  private int masSize;
+  private double averagePercentage;
+  
+  private ArrayList<Integer> countOfAlive = new ArrayList<Integer>();
+  private ArrayList<Integer> countOfDeath = new ArrayList<Integer>();
+  private long firstGeneration;
+  private long finalGeneration;  
+  private long generation = 1;
 
   private final String titleTemplate = "Conway's Game of Life | Generation: %d";
+  private static String COMMON_FILE_PATH = "Replays/ReplaysCommonInfo.dat";
+  private static String CURRENT_DATE;
   
   private Rectangle[][] content = new Rectangle[X_MAX][Y_MAX];
   private Rectangle cell;
@@ -74,14 +94,31 @@ public class MainApplication {
    */
   
   private void createNewGeneration() {
-    for (int i = 0; i < NUM_OF_SUPPORT; i += 2) {
-      lifeSupporting[i] = ThreadLocalRandom.current().nextInt(0, X_MAX + 1);
-      lifeSupporting[i + 1] = ThreadLocalRandom.current().nextInt(0, Y_MAX + 1);
-    }
+    Integer countOfAlive = 0, countOfDeath = 0;    
     for (int i = 0; i < X_MAX; i++) {
       for (int j = 0; j < Y_MAX; j++) {
         nextGeneration[i][j] = getRuleSetResult(i, j);
+        if (replayFlag == true) {
+          if (nextGeneration[i][j] == true) { 
+            countOfAlive++;
+          } 
+          else  {
+            countOfDeath++;
+          }
+        }
       }
+    }
+    if (replayFlag == true) {
+      this.countOfAlive.add(countOfAlive);
+      this.countOfDeath.add(countOfDeath);
+    }
+    if (lifeSupport == false) {
+      return;
+    }
+    for (int i = 0; i < NUM_OF_SUPPORT; i += 2) {
+      lifeSupporting[i] = ThreadLocalRandom.current().nextInt(0, X_MAX + 1);
+      lifeSupporting[i + 1] = ThreadLocalRandom.current().
+          nextInt(0, Y_MAX + 1);
     }
     for (int i = 0; i < X_MAX; i++) {
       for (int j = 0; j < Y_MAX; j++) {
@@ -157,12 +194,14 @@ public class MainApplication {
       for (int j = 0; j < Y_MAX; j++) {
         cell = content[i][j];
         if (nextGeneration[i][j] && !currentGeneration[i][j]) {
+          
           cell.setFill(Color.GRAY);
-        } else if (!nextGeneration[i][j] && currentGeneration[i][j]) {
+        } 
+        else if (!nextGeneration[i][j] && currentGeneration[i][j]) {
           cell.setFill(Color.ANTIQUEWHITE);
         }
       }
-    }
+    }    
     temporaryReference = currentGeneration;
     currentGeneration = nextGeneration;
     nextGeneration = temporaryReference;
@@ -176,17 +215,14 @@ public class MainApplication {
   private void setAnimation(Stage stage) {
     final Duration durationOfFps = Duration.millis(MSEC_IN_SEC / FPS);
     final KeyFrame keyFrame = new KeyFrame(durationOfFps, 
-        new EventHandler<ActionEvent>() {
-      private long generation = 1;
-
+        new EventHandler<ActionEvent>() {      
       @Override
       public void handle(ActionEvent event) {
         createNewGeneration();
         renderNextGeneration();
         stage.setTitle(String.format(titleTemplate, generation));
         generation++;
-        if (replayFlag == true)
-        {
+        if (replayFlag == true) {
           obj.setReplayInfo(nextGeneration, generation);
         }
       }
@@ -203,6 +239,7 @@ public class MainApplication {
   private HBox setField() {
     HBox hBox = new HBox();
     VBox btnsBox = new VBox(30);
+    
     Button replayStart = new Button("Start replay");
     Button replayStop = new Button("Stop replay");
     replayStop.setDisable(true);
@@ -220,12 +257,36 @@ public class MainApplication {
     }
     replayStart.setOnMouseClicked(event->{
       replayFlag = true;
+      CURRENT_DATE = new Date().toString();
+      firstGeneration = generation;
+      obj.setFileName(CURRENT_DATE);
       obj.setFpsToReplay(FPS);
       replayStart.setDisable(true);
       replayStop.setDisable(false);
     });
     replayStop.setOnMouseClicked(event->{
       replayFlag = false;
+      finalGeneration = generation;
+      try (DataOutputStream oStream = new DataOutputStream(
+          new BufferedOutputStream(new FileOutputStream(COMMON_FILE_PATH, 
+              true)))) {
+        oStream.writeUTF(CURRENT_DATE);
+        oStream.writeInt(FPS);
+        oStream.writeLong(finalGeneration - firstGeneration);
+        masSize = countOfAlive.size();
+        for (int i = 0; i < masSize; i++) {
+          commonCountOfAlive += countOfAlive.get(i);
+          commonCountOfDeath += countOfDeath.get(i);
+        }
+        averagePercentage = ((double)commonCountOfAlive 
+            / (double)commonCountOfDeath) * 100;
+        oStream.writeDouble(averagePercentage);
+        oStream.close();
+      } catch (FileNotFoundException e) {
+        e.printStackTrace();
+      } catch (IOException e1) {
+        e1.printStackTrace();
+      }
       replayStart.setDisable(false);
       replayStop.setDisable(true);
     }); 
@@ -236,13 +297,15 @@ public class MainApplication {
   }
 
   /**
+   * @param life_support 
    * @Method The main method of the class. Show modal window and call 
    * another method
    */
   
-  public void start(int fps, double aliveProb) {
-    Alive_Probability = aliveProb;
+  public void start(int fps, double aliveProb, boolean lifeSupport) {
+    AliveProbability = aliveProb;
     FPS = fps;
+    this.lifeSupport = lifeSupport;
     Stage stage = new Stage();
     stage.initModality(Modality.APPLICATION_MODAL);
 
@@ -250,7 +313,7 @@ public class MainApplication {
     stage.setScene(scene);
     stage.setTitle(String.format(titleTemplate, 0));
 
-    seed(Alive_Probability);
+    seed(AliveProbability);
     renderNextGeneration();
     stage.setResizable(false);
     stage.show();

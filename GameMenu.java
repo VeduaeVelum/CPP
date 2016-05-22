@@ -31,9 +31,7 @@ import javafx.util.Duration;
  *     define button actions. 
  */
 
-@SuppressWarnings("deprecation")
-public class GameMenu extends Application implements GameMenuConstants {
-  
+public class GameMenu extends Application implements GameMenuConstants {  
   private Pane root;
   private StackPane circles;
   private Scene scenario;
@@ -43,10 +41,14 @@ public class GameMenu extends Application implements GameMenuConstants {
   private FillTransition circAnim;
   
   private Label tipLbl;
+  
   private MenuItem newGame, settings, gameRules, replays, exit, 
-    sound, optionBack;
+    sound, optionBack, statistic;
   private SubMenu mainMenu, optionMenu;
   private MenuBox menuBox;
+  
+  private ReplaysWindow replayObj = new ReplaysWindow();
+  private GameStatisticCounter statObj = new GameStatisticCounter();
 
   /**
    * initializate_block define main parameters of class fields
@@ -84,11 +86,13 @@ public class GameMenu extends Application implements GameMenuConstants {
     settings = new MenuItem(SETTINGS);
     gameRules = new MenuItem(GAME_RULES);
     replays = new MenuItem(REPLAYS);
+    statistic = new MenuItem(STATISTIC);
     exit = new MenuItem(EXIT);
     sound = new MenuItem(SOUND);
     optionBack = new MenuItem(BACK);
 
-    mainMenu = new SubMenu(newGame, settings, replays, gameRules, exit);
+    mainMenu = new SubMenu(newGame, settings, replays, statistic, 
+        gameRules, exit);
     optionMenu = new SubMenu(sound, optionBack);
 
     menuBox = new MenuBox(mainMenu);
@@ -97,25 +101,30 @@ public class GameMenu extends Application implements GameMenuConstants {
 
   {
     newGame.setOnMouseClicked(event -> 
-      SetParamsToMainApp.setParams(SET_PARAMS_TITLE));
+        SetParamsToMainApp.setParams(SET_PARAMS_TITLE));
     settings.setOnMouseClicked(event -> 
-      menuBox.setSubMenu(optionMenu));
+        menuBox.setSubMenu(optionMenu));
     gameRules.setOnMouseClicked(event -> 
-      GameRules.showGameRules(GAME_RULES_TITLE));
+        GameRules.showGameRules(GAME_RULES_TITLE));
     optionBack.setOnMouseClicked(event -> 
-      menuBox.setSubMenu(mainMenu));
+        menuBox.setSubMenu(mainMenu));
     replays.setOnMouseClicked(event -> 
-      ReplaysWindow.showReplayList(REPLAYS_TITLE));
+        replayObj.showReplayList(REPLAYS_TITLE));
+    statistic.setOnMouseClicked(event->
+        statObj.showGameStatistic());
     exit.setOnMouseClicked(event -> {
       for (Thread thread : circleThread) {
         try {
-          thread.stop();
+          thread.join(); 
         }
         catch (IllegalThreadStateException e) {
           e.printStackTrace();
         }
         catch(SecurityException e) {
           e.printStackTrace();
+        }
+        catch (Exception e) {
+         e.printStackTrace();
         }
       }
       System.exit(0);
@@ -128,9 +137,8 @@ public class GameMenu extends Application implements GameMenuConstants {
    */
   
   public void start(Stage primaryStage) throws Exception {
-
     setAnimatedBackground();
-
+    
     scenario = new Scene(root, SCENE_SIZE, SCENE_SIZE);
 
     rect_background.widthProperty().bind(this.scenario.widthProperty());
@@ -142,6 +150,23 @@ public class GameMenu extends Application implements GameMenuConstants {
     primaryStage.setScene(scenario);
     primaryStage.setResizable(false);
     primaryStage.show();
+    primaryStage.setOnCloseRequest(event->{
+      for (Thread thread : circleThread) {
+        try {
+          thread.join(); 
+        }
+        catch (IllegalThreadStateException e) {
+          e.printStackTrace();
+        }
+        catch(SecurityException e) {
+          e.printStackTrace();
+        }
+        catch (Exception e) {
+         e.printStackTrace();
+        }
+      }
+      System.exit(0);
+    });
   }
 
   /**
@@ -155,18 +180,18 @@ public class GameMenu extends Application implements GameMenuConstants {
     root.getChildren().addAll(rect_background, circles, menuBox, tipLbl);
 
     but_circ.setOnMouseClicked(event->{
-      setCirclesConfiguration();
+        setCirclesConfiguration();
     });
     but_circ.setOnMouseEntered(event -> {
-      circAnim.setFromValue(Color.WHITE);
-      circAnim.setToValue(Color.PURPLE);
-      circAnim.setCycleCount(Animation.INDEFINITE);
-      circAnim.setAutoReverse(true);
-      circAnim.play();
+        circAnim.setFromValue(Color.WHITE);
+        circAnim.setToValue(Color.PURPLE);
+        circAnim.setCycleCount(Animation.INDEFINITE);
+        circAnim.setAutoReverse(true);
+        circAnim.play();
     });
     but_circ.setOnMouseExited(event -> {
-      circAnim.stop();
-      but_circ.setFill(Color.PURPLE);
+        circAnim.stop();
+        but_circ.setFill(Color.PURPLE);
     });
     
     root.getChildren().add(but_circ);
@@ -178,6 +203,7 @@ public class GameMenu extends Application implements GameMenuConstants {
    * 
    */
   
+  @SuppressWarnings("static-access")
   private void setCirclesAnimation() {
     for (int i = 0; i < CIRCLES_COUNT; i++) {
       Circle circle = new Circle();
@@ -200,11 +226,15 @@ public class GameMenu extends Application implements GameMenuConstants {
                         Timeline timeL = new Timeline();
             timeL.getKeyFrames().add(kFrame);
             timeL.setAutoReverse(true);
-            timeL.setCycleCount(Animation.INDEFINITE);
+            timeL.setCycleCount(Animation.INDEFINITE);           
             timeL.play();          
           }
         };
         circleThread[i].start();
+        circleThread[i].sleep(CIRCLES_SLEEP);
+      }
+      catch (InterruptedException e) {
+        e.printStackTrace();
       }
       catch (IllegalThreadStateException e) {
         e.printStackTrace();

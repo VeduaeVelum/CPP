@@ -36,7 +36,9 @@ public class ReplayWork {
   private static final double STROKE_SIZE = 0.25;
   private final static String titleTemplate = "Conway's Game of Life | "
       + "Generation: %d";
-  
+  private static String FILE_PATH;
+  private static final String FILE_FORMAT = ".dat";
+    
   private int FPS;
   private long generation;
   private boolean firstRead;
@@ -46,6 +48,7 @@ public class ReplayWork {
   
   private static Rectangle[][] content = new Rectangle[X_MAX][Y_MAX];
   private static Rectangle cell;
+  private Timeline timeline;
   
   /**
    * @Method This method set one frame to file
@@ -56,7 +59,7 @@ public class ReplayWork {
   
   public void setReplayInfo(boolean[][] nextGeneration, long generation) {
     try (DataOutputStream oStream = new DataOutputStream(
-        new BufferedOutputStream(new FileOutputStream(nameOfFile, true)))) {
+        new BufferedOutputStream(new FileOutputStream(FILE_PATH, true)))) {
       oStream.writeLong(generation);
       for (int i = 0; i < X_MAX; i++) {
         for (int j = 0; j < Y_MAX; j++) {
@@ -71,6 +74,13 @@ public class ReplayWork {
     }
   }
   
+  public void setFileName(String CurrentDate) {
+    FILE_PATH = "Replays/Replay_";
+    String buf = CurrentDate.replaceAll(" ", "_");    
+    FILE_PATH += buf.replaceAll(":", "_");
+    FILE_PATH += FILE_FORMAT;
+  }
+  
   /**
    * @Method This method set one fps value at first iteration of replay
    * recording
@@ -79,8 +89,8 @@ public class ReplayWork {
   
   public void setFpsToReplay(int FPS) {
     try (DataOutputStream oStream = new DataOutputStream(
-        new BufferedOutputStream(new FileOutputStream(nameOfFile)))) {
-      oStream.writeInt(FPS);    
+        new BufferedOutputStream(new FileOutputStream(FILE_PATH)))) {
+      oStream.writeInt(FPS); 
       oStream.close();
     } catch (FileNotFoundException e) {
       e.printStackTrace();
@@ -109,6 +119,9 @@ public class ReplayWork {
     getReplayFrame();
     renderNextGeneration();
     stage.setResizable(false);
+    stage.setOnCloseRequest(event->{
+      timeline.stop();
+    });
     stage.show();
     setAnimation(stage);
   }
@@ -147,16 +160,15 @@ public class ReplayWork {
       @Override
       public void handle(ActionEvent event) {
         if (!getReplayFrame())
-        {
-          stage.close();
+        {      
+          stage.close();           
           return;
         }
         renderNextGeneration();
         stage.setTitle(String.format(titleTemplate, generation));
-        generation++;
       }
     });
-    Timeline timeline = new Timeline(keyFrame);
+    timeline = new Timeline(keyFrame);
     timeline.setCycleCount(Animation.INDEFINITE);
     timeline.play();
   }
@@ -197,6 +209,10 @@ public class ReplayWork {
       
       if (iStream.available() == 0) {
         iStream.close();
+        this.timeline.stop();
+        /*new GameStatisticCounter(FPS, countOfAlive, countOfDeath,
+            finalGeneration - firstGeneration, nameOfFile).
+            showGameStatistic();*/
         return false;
       }    
       generation = iStream.readLong();

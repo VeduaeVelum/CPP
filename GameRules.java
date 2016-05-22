@@ -28,9 +28,9 @@ public class GameRules {
           + "\t 2. Процент заселенности поля\n"
           + "\n\n\t\t\t\t\t    УДАЧНОЙ ИГРЫ!";
   private static final String FONT_KIND = "Arial";
+  private static final int FONT_SIZE = 16;
   private static final int SCENE_WIDTH = 525;
   private static final int SCENE_HEIGHT = 400;
-  private static final int FONT_SIZE = 16;
   private static Label lbl;
   
   /**
