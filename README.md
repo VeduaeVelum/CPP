@@ -8,10 +8,13 @@ GENERAL USAGE NOTES
 beginners to understand the main themes of java interface 
 development
 
+
 - this project is able to import into java development 
 enviroment like Intelligence IDEA or Eclipse
 
+
 - all methods in this project have short desription
+
 ----------------------------------------------------------
 
 It's not recomended to set max FPU value during usage of the 
